@@ -1,1 +1,3 @@
-# Cavegen
+# Cave Generator
+
+Final Project Cave Generator system for Unity using Perlin noise maps, Included are three scripts for Generating, Texturing and Displaying the results of the CaveGenerator code
