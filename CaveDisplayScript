@@ -1,0 +1,18 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CaveDisplayScript : MonoBehaviour 
+{
+	public Renderer textureRender;
+
+	public void DrawTexture(Texture2D texture) 
+	{
+		//changes the appearance of objects using the material based on the texture thats being generated.
+		textureRender.sharedMaterial.mainTexture = texture;
+		textureRender.transform.localScale = new Vector3 (texture.width, 1, texture.height);
+	}
+}
+
+//Sebastian Lague, 2016. Procedural Landmass Generation (E04: Colours). [video online]
+//Available at: <https://www.youtube.com/watch?v=RDQK1_SWFuc> [Accessed]
