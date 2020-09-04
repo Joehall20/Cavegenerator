@@ -1,0 +1,161 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+//Imported Regex Utilities for use with UI text
+using System.Text.RegularExpressions;
+
+public class CaveGenerator : MonoBehaviour 
+{
+	
+	public Text seedText;
+	public InputField inputSeed;
+
+	//Map Dimensions
+	public int mapWidth= 100;
+	public int mapHeight= 100;
+	private float noiseScale = 16.43f;
+
+	private int octaves = 2;
+	private float persistance = 0.48f;
+	private float gap = 2;
+
+	public int seed;
+
+	public TerrainType[] regions;
+
+	public void genButton() //Method for button that takes in the random seed and runs the method for generating a map
+	{
+		inputSeed.text = "";//Set string as empty
+		seed = Random.Range (-100000, 100000); //Sets seed int to a random number between -10000 and 10000 when button is pressed.
+		seedText.text = "Seed: " + seed.ToString (); //Displays the current seed value in the scene
+		GenerateMap (); //Calls Generate Map Method
+	}
+
+	public void GenerateMap()//Method for generating a map based on a user inputted seed
+	{
+		if (inputSeed.text != "") //If statement that checks that the seed isn’t a blank string
+		{
+			seed = int.Parse (inputSeed.text); //If true, take the users input and store it as a variable
+		}
+
+		float[,] noiseMap = Noise.GenerateNoiseMap (mapWidth, mapHeight, seed, noiseScale, octaves, persistance, gap);
+		//Creates a colour map using the dimension variables
+		Color[] colourMap = new Color[mapWidth * mapHeight];
+
+		//For Loop through every Pixel in the Array
+		//For each pixel on the y axis
+		for (int y = 0; y < mapHeight; y++) 
+		{
+			//For each pixel on the x axis
+			for (int x = 0; x < mapWidth; x++) 
+			{
+				float currentHeight = noiseMap [x, y];
+				//For each index, up to the reigion length, increment index
+				for (int i = 0; i < regions.Length; i++) 
+				{
+					//If the current height is less than the height at that index
+					if (currentHeight <= regions [i].height) 
+					{
+						//Set the colour map colour
+						colourMap [y * mapWidth + x] = regions [i].colour;
+						break;
+					}
+
+				}
+			}
+		}
+		CaveDisplayScript display = FindObjectOfType<CaveDisplayScript> ();
+		//Adds texture to plane to show cave map
+		display.DrawTexture (CaveTextureGen.TextureFromColourMap(colourMap, mapWidth, mapHeight)); 
+	}
+}
+
+//Method for adding Noise
+public static class Noise 
+{
+	//Declaration of variables required for the Perlin Noise
+	public static float[,] GenerateNoiseMap(int caveWidth, int caveHeight, int seed, float scale, int octaves, float persistance, float gap) {
+		//Float for the size of the generated Noise map
+		float[,] noiseMap = new float [caveWidth,caveHeight];
+		//Random seed for creation of the Perlin Noise Map
+		System.Random variance = new System.Random (seed);
+		Vector2[] octaveOffset = new Vector2[octaves];
+		//for each index, up to the octaves, increment index
+		for (int i = 0; i < octaves; i++) 
+		{
+			//offset variance for x
+			float offsetX = variance.Next (0, 100000);
+			//offset variance for x
+			float offsetY = variance.Next (0, 100000);
+			//octave offset using x and y variance
+			octaveOffset [i] = new Vector2 (offsetX, offsetY);
+		}
+
+		float maxNoiseHeight = float.MinValue;
+		float minNoiseHeight = float.MaxValue;
+
+		//Loop through every pixel
+		//For each pixel on the y axis
+		for (int y = 0; y < caveHeight; y++) 
+		{
+			//For each pixel on the x axis
+			for (int x = 0; x < caveWidth; x++) 
+			{
+
+				float amplitude = 1;
+				float frequency = 1;
+				float noiseHeight = 0;
+				//for each index, up to the octaves, increment index
+				for (int i = 0; i < octaves; i++) {
+					//Adjusts the noise map based on the frequency and octave offsetting
+					float sampleX = x / scale * frequency + octaveOffset[i].x;
+					float sampleY = y / scale * frequency + octaveOffset[i].y;
+
+					float perlinValue = Mathf.PerlinNoise (sampleX, sampleY) * 2 - 1;
+					noiseHeight += perlinValue * amplitude;
+					//amplitude = amplitude * persistance
+					amplitude *= persistance;
+					//frequency = frequency * gap
+					frequency *= gap;
+				}
+
+				if (noiseHeight > maxNoiseHeight) 
+				{
+					maxNoiseHeight = noiseHeight;
+				} 
+				else if (noiseHeight < minNoiseHeight) 
+				{
+					minNoiseHeight = noiseHeight;
+				}
+				noiseMap [x, y] = noiseHeight;
+			}
+		}
+
+		for (int y = 0; y < caveHeight; y++) 
+		{
+			for (int x = 0; x < caveWidth; x++) 
+			{
+				noiseMap [x, y] = Mathf.InverseLerp (minNoiseHeight, maxNoiseHeight, noiseMap [x, y]);
+			}
+		}
+
+		return noiseMap;
+	}
+}
+
+[System.Serializable]
+public struct TerrainType 
+{
+	public string name;
+	public float height;
+	public Color colour;
+}
+
+
+
+//Sebastian Lague, 2016. Procedural Landmass Generation (E02: noise Map). [video online]
+//Available at: <https://www.youtube.com/watch?v=WP-Bm65Q-1Y> [Accessed]
+//Sebastian Lague, 2016. Procedural Landmass Generation (E03: Octaves). [video online]
+//Available at: <https://www.youtube.com/watch?v=MRNFcywkUSA> [Accessed]
+//Sebastian Lague, 2016. Procedural Landmass Generation (E04: Colours). [video online]
+//Available at: <https://www.youtube.com/watch?v=RDQK1_SWFuc> [Accessed]
